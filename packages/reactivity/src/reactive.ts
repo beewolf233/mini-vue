@@ -45,3 +45,10 @@ function createReactiveObject(
   proxyMap.set(target, proxy)
   return proxy
 }
+
+/**
+ * 将指定数据变为 reactive 数据
+ */
+export const toReactive = <T extends unknown>(value: T): T =>
+  isObject(value) ? reactive(value as object) : value
+
