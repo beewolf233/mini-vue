@@ -1,11 +1,17 @@
 import { Dep, createDep } from './dep'
+import { ComputedRefImpl } from './computed'
+import { extend } from '@vue/shared'
 
 type KeyToDepMap = Map<any, Dep>
 /**
  * 单例的，当前的 effect
  */
 export let activeEffect: ReactiveEffect | undefined
-
+export type EffectScheduler = (...args: any[]) => any
+export interface ReactiveEffectOptions {
+  lazy?: boolean
+  scheduler?: EffectScheduler
+}
 /**
  * 收集所有依赖的 WeakMap 实例：
  * 1. `key`：响应性对象
@@ -14,6 +20,7 @@ export let activeEffect: ReactiveEffect | undefined
  * 		2. `value`：指定对象的指定属性的 执行函数
  */
 const targetMap = new WeakMap<any, KeyToDepMap>()
+
 /**
  * 用于收集依赖的方法
  * @param target WeakMap 的 key
@@ -48,7 +55,6 @@ export function trackEffects(dep: Dep) {
   dep.add(activeEffect!)
 }
 
-
 /**
  * 触发依赖的方法
  * @param target WeakMap 的 key
@@ -71,6 +77,8 @@ export function trigger(target: object, key?: unknown, newValue?: unknown) {
   }
   // 触发 dep
   triggerEffects(dep)
+
+
 }
 
 /**
@@ -80,16 +88,35 @@ export function triggerEffects(dep: Dep) {
   // 把 dep 构建为一个数组
   const effects = Array.isArray(dep) ? dep : [...dep]
   // 依次触发
+  // for (const effect of effects) {
+  //   triggerEffect(effect)
+  // }
+  
   for (const effect of effects) {
-    triggerEffect(effect)
+    if (effect.computed) {
+      triggerEffect(effect)
+    }
   }
+  for (const effect of effects) {
+    if (!effect.computed) {
+      triggerEffect(effect)
+    }
+  }
+
 }
 
 /**
  * 触发指定的依赖
  */
 export function triggerEffect(effect: ReactiveEffect) {
-  effect.run()
+  // 存在调度器就执行调度函数
+  if (effect.scheduler) {
+    effect.scheduler()
+  }
+  // 否则直接执行 run 函数即可
+  else {
+    effect.run()
+  }
 }
 
 /**
@@ -97,26 +124,29 @@ export function triggerEffect(effect: ReactiveEffect) {
  * @param fn 执行方法
  * @returns 以 ReactiveEffect 实例为 this 的执行函数
  */
-/**
- * effect 函数
- * @param fn 执行方法
- * @returns 以 ReactiveEffect 实例为 this 的执行函数
- */
-export function effect<T = any>(fn: () => T) {
+export function effect<T = any>(fn: () => T, options?: ReactiveEffectOptions) {
   // 生成 ReactiveEffect 实例
   const _effect = new ReactiveEffect(fn)
-  // 执行 run 函数
-  _effect.run()
+  // 存在 options，则合并配置对象
+  if (options) {
+    extend(_effect, options)
+  }
+  
+  if (!options || !options.lazy) {
+    // 执行 run 函数
+    _effect.run()
+  }
 }
 
-/**
- * 响应性触发依赖时的执行类
- */
 /**
  * 响应性触发依赖时的执行类
  */
 export class ReactiveEffect<T = any> {
-  constructor(public fn: () => T) {}
+  computed?: ComputedRefImpl<T>
+  constructor(
+    public fn: () => T,
+    public scheduler: EffectScheduler | null = null
+  ) {}
 
   run() {
     // 为 activeEffect 赋值
@@ -124,5 +154,8 @@ export class ReactiveEffect<T = any> {
 
     // 执行 fn 函数
     return this.fn()
+  }
+  stop() {
+    
   }
 }

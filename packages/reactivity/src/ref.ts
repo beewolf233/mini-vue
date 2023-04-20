@@ -74,7 +74,6 @@ class RefImpl<T> {
  * 为 ref 的 value 进行依赖收集工作
  */
 export function trackRefValue(ref) {
-  console.log(activeEffect, '执行依赖工作')
   if (activeEffect) {
     trackEffects(ref.dep || (ref.dep = createDep()))
   }
