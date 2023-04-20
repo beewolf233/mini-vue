@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script>
+    // 定义一个源对象
+    const obj = { name: 'xiaopang' };
+
+    // 创建一个代理对象
+    const proxy = new Proxy(obj, {
+      get(target, key) {
+        console.log(target, key)
+        // 当访问proxy代理对象的属性时， 会执行get函数
+        // 读
+        return target[key]
+      },
+      set(target, key, value) {
+        // 当设置proxy代理对象的属性时， 会执行set函数
+        // 写
+        target[key] = value;
+        console.log("进行改变了")
+        return true
+      }
+    })
+
+    console.log(proxy.age);
+    console.log(proxy.name);
+    proxy.age = 100;
+    console.log(proxy.age)
+  </script>
+</body>
+</html>

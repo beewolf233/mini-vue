@@ -1,1 +1,1 @@
-console.log("hello world");
+export { reactive,  effect } from '@vue/reactivity';
